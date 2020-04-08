@@ -1,0 +1,367 @@
+#! /usr/bin/env bash
+
+#
+# param1: input string
+#
+# Shifts args in a blank delimited
+# string.
+# e.g., if input is '1 2 3', ouput is '2 3'
+# if input is '4', ouput is ''
+#
+shift_args() {
+	local arg_schema=$1
+
+	awk '{
+		for (i = 1 ; i <= NF - 1 ; ++i) {
+			$i=$(i+1)
+		}
+		$NF=""
+		NF--
+		printf $0
+	}' <<<"$arg_schema"
+}
+
+
+#
+# param1: input string
+#
+# returns first element in blank delimited string
+# e.g.,
+# if input is '2 3 4', returns 2
+# if input is '3' returns 3
+# if input is '' returns ''
+#
+get_arg1() {
+	local arg_schema=$1
+
+	awk '{printf $1}' <<<"$arg_schema"
+}
+
+#
+# Checks validity of schema
+#
+# param1: schema
+#
+# retval:
+#   1 : invalid character
+#   2 : -1 used in between the schema but only last arg can be optional
+#   3 : S/0 used in combination with others but they are to be used alone
+#
+is_schema_valid() {
+
+	if [ -z "$1" ] ; then
+		return -1
+	fi
+
+	local schema=$1
+	local schema_copy=$schema
+	local schema_element
+	local cnt=0
+
+	while [ -n "$schema" ] ; do
+		
+		((++cnt))
+
+		schema_element="$( get_arg1 "$schema" )"
+		schema="$( shift_args "$schema" )"
+
+		case "$schema_element" in
+
+			1)
+				continue
+				;;
+			-1)
+				# optional arg can only be last arg
+				if [ -n "$schema" ] ; then
+					>&2 echo "Invalid schema $schema_copy: only the last arg can be optional"
+					return 2
+				fi
+				;;
+			0|S)
+				if [ 1 -ne $cnt ] || [ -n "$schema" ] ; then
+					>&2 echo "Invalid schema $schema_copy : $schema_element needs to be used alone"
+					return 3
+				fi
+				;;
+			*)
+				return 1
+				;;
+		esac
+
+	done
+
+	return 0
+}
+
+#
+# param1: error_code
+#   code returned by parse_options()
+#
+# param2: options_array
+#
+option_parser_error_msg() {
+
+	local error_code=$1 ; shift
+	local option_array=$1 ; shift
+	local err_opt="$(eval echo \$\{$option_array\[error_opt\]\} )"
+
+	case "$error_code" in
+		-1)
+			>&2 echo "Invalid schema for $err_opt"
+			;;
+		1)
+			>&2 echo "Insufficient args for $err_opt"
+			;;
+		2)
+			>&2 echo "Ambiguous args passed"
+			;;
+	esac
+
+}
+
+#
+# schema:
+#   Corresponding to every option, a schema is passed which determines
+#   the patten in which the option receives arguments.
+#   There are 4 characters available to define the schema:
+#
+#   1  : Means argument is necessary
+#   -1 : Means argument is optional (this can only be last element in schema)
+#   0  : Means doesn't receive any argumeny
+#   S  : Is a sub-command
+#
+#   So, schema '1 1 1 -1' would mean the option needs 3 args and 4th is optional.
+#   So let's say we have 3 options, -a, -b and -c.
+#
+#   -a needs at least one arg and can receive a second arg optionally
+#   -b doesn't need any args
+#   -c is a sub-command
+#  
+#   Schema for -a = '1 -1'
+#   Schema for -b = '0'
+#   Schema for -c = 'S'
+#
+# param1: separator
+#   param1 is used to indicate the string that will separate
+#   names of main option and their alias names.
+#   e.g., if param1 is '~' and option's main name is -v with
+#         --version and --ver as its aliases, then
+#   '-v' '~' '--version' '~' '--ver' '0'
+#
+# param2: option array name
+#   In this arg you pass a "name" which will be made an associative array.
+#   For instance, if you pass 'OPTIONS', it would create a new associative
+#   array named OPTIONS like `declare -gA OPTIONS`.
+#   When the function returns, all options that were passed are made key in it
+#   with a non-null value.
+#   For instance if option named -v was found, OPTIONS[-v] would be non-null.
+#   Also, only the main names are stored as keys. All alias names would be
+#   resolved to the main name. So if --version was found on parsing, it would be
+#   stored as '-v'.
+#   For a sub-command (schema 'S'), the value correcponding to it's key in OPTION
+#   array would be number of shifts required to reach sub-command's args.
+#   e.g., if c/create is a sub-command, and command takes another 6 options
+#   -e, -n, -t, -g, -s and -v, then
+#   command -v -t arg -s create hello world -abc
+#   So in this case OPTIONS[create] would contain value 5 because `shift 5`
+#   would result in "hello world -abc" which are the args of sub-command.
+#   The same command can be passed to parse_options again with shift count 5
+#   to parse the sub-command.
+#   In case of any other type of options OPTIONS[<option_name>] would contain a single
+#   space " " in order to make it non-null.
+#
+# param3: args_cnt_array_name
+#   This is the "name" of the associative array that would
+#   store the argument count corresponding to each option.
+#   So if you pass 'ARG_CNT', it would store number of args
+#   the arg received. If no arg is received, it is null.
+#   It is "always" null if schema is 'S' or '0'.
+#   If schema is '-1', it may or may not be null.
+#   e.g., if schema was '1 1 -1', and on cmd line only 2 args were
+#   passed, ARG_CNT[<option_name>] would be equal to 2.
+#
+# param4: args_array_name
+#   This is the "name" of the associative array that would
+#   store arguments corresponding to each option.
+#   So if you pass 'ARGS', it would store each arg corresponding
+#   to an option in a 2D-array-like way.
+#   e.g., an option -e/--eat has a schema '1 1 -1'.
+#   On command line it was passed args 'bread', 'butter' and 'milk', then
+#   ARGS[-e,0]=bread
+#   ARGS[-e,1]=butter
+#   ARGS[-e,2]=milk
+#
+# param5: nshift
+#   This is the number of shifts made before parsing args.
+#   e.g., If cmdline args were like:
+#     command -v --new "file" create hello world lalala
+#   and you want to parse args after 'create', so nshift should be 4.
+#   If would shift initial 4 args and start parsing after create.
+#   This is useful for parsing subcommands. We get the number of shifts
+#   required from value of OPTIONS[] as discussed in param2.
+#
+# param6: terminator
+#   This is the character which marks the end of the possible options
+#   e.g., if terminator is ';' and there were 4 options, -n/--new,
+#         -v/--ver/--version, c/create & -e/--eat, then
+#
+#    parse_options \
+#      '~' 'OPTIONS' 'ARG_CNT' 'ARGS' '0' ';'    \
+#      'c'  '~' 'create'                'S'      \
+#      '-e' '~' '--eat'                 '1 1 -1' \
+#      '-n' '~' '--new'                 '1'      \
+#      '-v' '~' '--version' '~' '--ver' '0'      \
+#      ';'                                       \
+#      "$@"
+#   where ';' marked the end of possible options.
+#
+# param7: no_opt_indicator
+#   Treat following arg is a normal arg even if it's
+#   an option
+#   e.g., Let's say no_opt is '--'.
+#   if there are 2 options -n and -m where -n takes an arg,
+#   it can be that arg received by -n has the name "-m",
+#   then on cmdline, it can be done like:
+#     command -n -- -m
+#   "-m" will be treated as arg to -n
+#   If the arg itself was '--', then it could have been
+#   achieved like:
+#     command -n -- --
+#
+# retval:
+#
+#  SUCCESS:
+#   0 : if command line args are not invalid
+#
+#  FAILURE:
+#   1 : insufficient args are supplied for some particular option
+#   2 : extra agrs supplied
+#
+parse_options() {
+
+	# separator used to add alias names of options
+	local separator=$1 ; shift
+	local option_array_name=$1 ; shift
+	local args_cnt_array_name=$1 ; shift
+	local args_array_name=$1 ; shift
+	local nshift=$1 ; shift
+	local terminator=$1 ; shift
+	local no_opt_indicator=$1 ; shift
+
+	# stores options as keys and their arg schema as value
+	declare -A option_array
+
+	# array of alias names of options and their value
+	# contains original name of option
+	declare -A alias_array
+
+	declare -gA $option_array_name
+	declare -gA $args_array_name
+	declare -gA $args_cnt_array_name
+
+	local option
+	local current_option
+	local schema
+	local schema_element
+	local passed_arg
+	local arg_no
+	local next_is_not_opt=0
+	local shift_count=-1
+
+	# store all options as keys in `option_array[]` with schema as their value
+	until [ "$1" = "$terminator" ] ; do
+		option=$1 ; shift
+
+ 		# for all aliases, create a key in alias_array whose value is $option
+		while [ "$1" = "$separator" ]; do
+			shift ; alias_array[$1]=$option ; shift
+		done
+
+		schema=$1
+
+		# assign schema of the option as value
+		if is_schema_valid "$schema" ; then
+			option_array[$option]=$schema ; shift
+		else
+			eval $option_array_name\['error_opt'\]\=\"\$option\"
+			return -1
+		fi
+
+	done
+
+	shift # to skip the terminator
+
+	shift $nshift
+
+	# This loop parses the cmd line args
+	for passed_arg in "$@" ; do
+
+		((shift_count++))
+
+		if [ $next_is_not_opt -eq 0 ] ; then
+
+			if [ "$passed_arg" = "$no_opt_indicator" ] ; then
+				next_is_not_opt=1
+				continue
+			fi
+
+			# if passed option is an alias, resolve it to original name
+			if [ -n "${alias_array[$passed_arg]}" ] ; then
+				passed_arg=${alias_array[$passed_arg]}
+			fi
+
+			if [ -n "${option_array[$passed_arg]}" ] ; then
+				current_option=$passed_arg
+
+				if [ "$schema_element" = "1" ]; then
+					# if args of some other option were being processed
+					# but another option was passed in between
+					eval $option_array_name\['error_opt'\]\=\"\$current_option\"
+					return 1
+				else
+					schema=${option_array[$passed_arg]}
+					schema_element="$( get_arg1 "$schema" )"
+					schema="$( shift_args "$schema" )"
+					arg_no=0
+
+					case $schema_element in
+						'1'|'-1'|'0')
+							# $option_array_name[$passed_arg] needs to be made non-null.
+							eval $option_array_name\[\$current_option\]\=" "
+							;;
+						'S')
+							# it's a subcommand
+							((shift_count++))
+							eval $option_array_name\[\$current_option\]\=\"\$shift_count\"
+							return 0
+							;;
+					esac
+				fi
+
+				continue
+			fi
+
+		else
+			next_is_not_opt=0
+		fi
+			
+			
+		if [ "$schema_element" = "1" ] || [ "$schema_element" = "-1" ] ; then
+			eval $args_array_name\[\$current_option,\$arg_no\]\+\="\"\$passed_arg\""
+			eval $args_cnt_array_name\[\$current_option\]="\"\$arg_no\""
+			((arg_no++))
+			schema_element="$( get_arg1 "$schema" )"
+			schema="$( shift_args "$schema" )"
+		else
+			return 2
+		fi
+
+	done
+
+	if [ "$schema_element" = "1" ] ; then
+		eval $option_array_name\['error_opt'\]\=\"\$current_option\"
+		return 1
+	fi
+
+	return 0
+}
