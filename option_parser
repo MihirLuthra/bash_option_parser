@@ -261,6 +261,7 @@ parse_options() {
 
 	local option
 	local current_option
+	local prev_opt
 	local schema
 	local schema_element
 	local passed_arg
@@ -311,12 +312,13 @@ parse_options() {
 			fi
 
 			if [ -n "${option_array[$passed_arg]}" ] ; then
+				prev_opt=$current_option
 				current_option=$passed_arg
 
 				if [ "$schema_element" = "1" ]; then
 					# if args of some other option were being processed
 					# but another option was passed in between
-					eval $option_array_name\['error_opt'\]\=\"\$current_option\"
+					eval $option_array_name\['error_opt'\]\=\"\$prev_opt\"
 					return 1
 				else
 					schema=${option_array[$passed_arg]}
