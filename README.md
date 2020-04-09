@@ -52,7 +52,7 @@ if [ -n "${OPTIONS[-s]}" ]; then
   echo "-s option was passed"
 
   # cnt_args_passed contains the number of args the option received
-  cnt_args_passed=${ARG_CNT[-s]}
+  cnt_args_passed=${ARG_CNT[-s]:-0}
 
   # print the first arg:
   echo "${ARGS[-s,0]}"
