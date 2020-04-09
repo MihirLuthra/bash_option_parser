@@ -168,7 +168,7 @@ option_parser_error_msg() {
 #   The same command can be passed to parse_options again with shift count 5
 #   to parse the sub-command.
 #   In case of any other type of options OPTIONS[<option_name>] would contain a single
-#   space " " in order to make it non-null.
+#   space "1" in order to make it non-null.
 #
 # param3: args_cnt_array_name
 #   This is the "name" of the associative array that would
@@ -327,7 +327,7 @@ parse_options() {
 					case $schema_element in
 						'1'|'-1'|'0')
 							# $option_array_name[$passed_arg] needs to be made non-null.
-							eval $option_array_name\[\$current_option\]\=" "
+							eval $option_array_name\[\$current_option\]\="1"
 							;;
 						'S')
 							# it's a subcommand
