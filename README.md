@@ -32,6 +32,8 @@ sample
 We can parse options as per the above criteria as follows:
 
 ```bash
+#! /usr/bin/env bash
+
 source ./option_parser
 
 parse_options \
@@ -40,7 +42,14 @@ parse_options \
 		'-m'        , '--make'   , '--create'  '0'          \
 		';' \
 		"$@"
-    
+
+retval=$?
+
+if [ $retval -ne 0 ]; then
+	option_parser_error_msg "$retval" 'OPTIONS'
+	exit 1
+fi
+
 #
 # Now if some options are passed,
 # they are stored in OPTIONS[] as the key.
@@ -70,8 +79,7 @@ if [ -n "${OPTIONS[-s]}" ]; then
     echo "${ARGS[-s,2]}"
   fi
   
-fi  
-
+fi
 ```
 
 <h2>Params Explaination</h2>
