@@ -23,6 +23,8 @@
 
 <h2>Example</h2>
 
+This is a simple example to show basic functionailty. Checkout <a href="option_parser_usage_example">option_parser_usage_example</a> for a better understanding (preferably try executing on you system).
+
 Consider a sample command named `sample`.
 It accepts options as per the following usage format:
 
