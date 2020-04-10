@@ -12,6 +12,9 @@ usage() {
 
 test_parser() {
 
+	local last_arg
+	local error_code
+
 	parse_options \
 		',' 'OPTIONS' 'ARG_CNT' 'ARGS' 'self' '0' ';' '--'  \
 		'-s'        , '--search' , '--find'    '1 1 -1'     \
@@ -32,7 +35,8 @@ test_parser() {
 		echo "OPTION --> $key"
 		if [ -n "${ARG_CNT[$key]}" ] ;then
 			echo "ARGS ----> $key:"
-			for pos in $( seq 0 ${ARG_CNT[$key]} ) ;do
+			last_arg="$( expr ${ARG_CNT[$key]} - 1 )"
+			for pos in $( seq 0 $last_arg ) ;do
 				echo "ARG[$key][$pos] -------> ${ARGS[$key,$pos]}"
 			done
 		fi

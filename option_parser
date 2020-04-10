@@ -364,14 +364,14 @@ parse_options() {
 			
 		if [ "$schema_element" = "1" ] || [ "$schema_element" = "-1" ] ; then
 			eval $args_array_name\[\$current_option,\$arg_no\]\+\="\"\$passed_arg\""
-			eval $args_cnt_array_name\[\$current_option\]="\"\$arg_no\""
 			((arg_no++))
+			eval $args_cnt_array_name\[\$current_option\]="\"\$arg_no\""
 			schema_element="$( get_arg1 "$schema" )"
 			schema="$( shift_args "$schema" )"
 		else
 			eval $args_array_name\[\$self_key_name,\$self_arg_no\]\+\="\"\$passed_arg\""
-			eval $args_cnt_array_name\[\$self_key_name\]="\"\$self_arg_no\""
 			((self_arg_no++))
+			eval $args_cnt_array_name\[\$self_key_name\]="\"\$self_arg_no\""
 		fi
 
 	done
