@@ -13,7 +13,7 @@ usage() {
 test_parser() {
 
 	parse_options \
-		',' 'OPTIONS' 'ARG_CNT' 'ARGS' '0' ';' '--' \
+		',' 'OPTIONS' 'ARG_CNT' 'ARGS' 'self' '0' ';' '--'  \
 		'-s'        , '--search' , '--find'    '1 1 -1'     \
 		'-m'        , '--make'   , '--create'  '0'          \
 		'suboption' , 'subopt'                 'S'          \

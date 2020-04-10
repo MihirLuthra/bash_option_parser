@@ -112,9 +112,6 @@ option_parser_error_msg() {
 		1)
 			>&2 echo "Insufficient args for $err_opt"
 			;;
-		2)
-			>&2 echo "Ambiguous args passed"
-			;;
 	esac
 
 }
@@ -191,7 +188,18 @@ option_parser_error_msg() {
 #   ARGS[-e,1]=butter
 #   ARGS[-e,2]=milk
 #
-# param5: nshift
+# param5: self key name
+#  If the options passed don't belong to a particular option
+#  and instead are arg to main command itself, details corresponding
+#  to these are stored in param2, param3 and param4. They key used
+#  to store these details is given by this i.e. param5.
+#  Similar to example in param4 above if args 'bread', 'butter' and 'milk'
+#  were passed directly to main arg and param5 was 'self', then
+#   ARGS[self,0]=bread
+#   ARGS[self,1]=butter
+#   ARGS[self,2]=milk
+#
+# param6: nshift
 #   This is the number of shifts made before parsing args.
 #   e.g., If cmdline args were like:
 #     command -v --new "file" create hello world lalala
@@ -200,13 +208,13 @@ option_parser_error_msg() {
 #   This is useful for parsing subcommands. We get the number of shifts
 #   required from value of OPTIONS[] as discussed in param2.
 #
-# param6: terminator
+# param7: terminator
 #   This is the character which marks the end of the possible options
 #   e.g., if terminator is ';' and there were 4 options, -n/--new,
 #         -v/--ver/--version, c/create & -e/--eat, then
 #
 #    parse_options \
-#      '~' 'OPTIONS' 'ARG_CNT' 'ARGS' '0' ';'    \
+#      '~' 'OPTIONS' 'ARG_CNT' 'ARGS' 'self' '0' ';' \
 #      'c'  '~' 'create'                'S'      \
 #      '-e' '~' '--eat'                 '1 1 -1' \
 #      '-n' '~' '--new'                 '1'      \
@@ -215,7 +223,7 @@ option_parser_error_msg() {
 #      "$@"
 #   where ';' marked the end of possible options.
 #
-# param7: no_opt_indicator
+# param8: no_opt_indicator
 #   Treat following arg is a normal arg even if it's
 #   an option
 #   e.g., Let's say no_opt is '--'.
@@ -235,7 +243,6 @@ option_parser_error_msg() {
 #
 #  FAILURE:
 #   1 : insufficient args are supplied for some particular option
-#   2 : extra agrs supplied
 #
 parse_options() {
 
@@ -244,6 +251,7 @@ parse_options() {
 	local option_array_name=$1 ; shift
 	local args_cnt_array_name=$1 ; shift
 	local args_array_name=$1 ; shift
+	local self_key_name=$1 ; shift
 	local nshift=$1 ; shift
 	local terminator=$1 ; shift
 	local no_opt_indicator=$1 ; shift
@@ -265,7 +273,8 @@ parse_options() {
 	local schema
 	local schema_element
 	local passed_arg
-	local arg_no
+	local arg_no=0
+	local self_arg_no=0
 	local next_is_not_opt=0
 	local shift_count=-1
 
@@ -293,6 +302,11 @@ parse_options() {
 	shift # to skip the terminator
 
 	shift $nshift
+
+	if [ -n "$*" ]
+	then
+		eval $option_array_name\[\$self_key_name\]\="1"
+	fi
 
 	# This loop parses the cmd line args
 	for passed_arg in "$@" ; do
@@ -329,7 +343,7 @@ parse_options() {
 					case $schema_element in
 						'1'|'-1'|'0')
 							# $option_array_name[$passed_arg] needs to be made non-null.
-							eval $option_array_name\[\$current_option\]\="1"
+							eval $option_array_name\[\$current_option\]\=\"\$shift_count\"
 							;;
 						'S')
 							# it's a subcommand
@@ -350,12 +364,14 @@ parse_options() {
 			
 		if [ "$schema_element" = "1" ] || [ "$schema_element" = "-1" ] ; then
 			eval $args_array_name\[\$current_option,\$arg_no\]\+\="\"\$passed_arg\""
-			((arg_no++))
 			eval $args_cnt_array_name\[\$current_option\]="\"\$arg_no\""
+			((arg_no++))
 			schema_element="$( get_arg1 "$schema" )"
 			schema="$( shift_args "$schema" )"
 		else
-			return 2
+			eval $args_array_name\[\$self_key_name,\$self_arg_no\]\+\="\"\$passed_arg\""
+			eval $args_cnt_array_name\[\$self_key_name\]="\"\$self_arg_no\""
+			((self_arg_no++))
 		fi
 
 	done
