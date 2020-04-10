@@ -16,6 +16,18 @@ usage() {
 	exit 1
 }
 
+usage_suboption() {
+
+	>&2 printf "%s\n" \
+		"$PROG_NAME suboption ..." \
+		"  [-a|--apple]" \
+		"  [-u|--unix arg1 ...]" \
+		"  [-l|--linux arg1 arg2 [arg3]] "
+
+	exit 1
+}
+
+
 test_parser() {
 
 	local last_arg
@@ -31,7 +43,7 @@ test_parser() {
 		"$@"
 
 	error_code=$?
-	echo "$error_code"
+	echo "retval = $error_code"
 
 	if [ $error_code -ne 0 ]; then
 		option_parser_error_msg "$error_code" 'OPTIONS'
@@ -45,6 +57,50 @@ test_parser() {
 			last_arg="$( expr ${ARG_CNT[$key]} - 1 )"
 			for pos in $( seq 0 $last_arg ) ;do
 				echo "ARG[$key][$pos] -------> ${ARGS[$key,$pos]}"
+			done
+		fi
+	done
+
+	#
+	# Now parsing suboption
+	#
+
+	local shift_cnt=${OPTIONS[suboption]}
+
+	if [ -z "$shift_cnt" ]
+	then
+		return 0
+	fi
+
+	parse_options \
+		',' 'OPTIONS_S' 'ARG_CNT_S' 'ARGS_S' 'self' "$shift_cnt" ';' '--'  \
+		                          \
+		'-a' , '--apple' '0'      \
+		'-l' , '--linux' '1 1 -1' \
+		'-u' , '--unix'  '1 ...'  \
+		                          \
+		';' \
+		"$@"
+
+	error_code=$?
+
+	printf "\nsuboption now:\n\n"
+
+	echo "retval = $error_code"
+
+	if [ $error_code -ne 0 ]; then
+		option_parser_error_msg "$error_code" 'OPTIONS_S'
+		usage_suboption
+	fi
+
+
+	for key in "${!OPTIONS_S[@]}"; do
+		echo "OPTION_S --> $key"
+		if [ -n "${ARG_CNT_S[$key]}" ] ;then
+			echo "ARGS_S ----> $key:"
+			last_arg="$( expr ${ARG_CNT_S[$key]} - 1 )"
+			for pos in $( seq 0 $last_arg ) ;do
+				echo "ARG[$key][$pos] -------> ${ARGS_S[$key,$pos]}"
 			done
 		fi
 	done
