@@ -37,7 +37,7 @@ We can parse options as per the above criteria as follows:
 source ./option_parser
 
 parse_options \
-		',' 'OPTIONS' 'ARG_CNT' 'ARGS' '0' ';' '--'         \
+		',' 'OPTIONS' 'ARG_CNT' 'ARGS' 'self' '0' ';' '--'  \
 		'-s'        , '--search' , '--find'    '1 1 -1'     \
 		'-m'        , '--make'   , '--create'  '0'          \
 		';' \
@@ -153,8 +153,22 @@ param1 tells what separator you want to use to separate alias names.
 </pre>
 	</li>
 </ol>
-		
-<h4>param5: shift count</h4>
+	
+<h4>param5: self key name</h4>
+
+<ol>
+	<li>
+		If the options passed don't belong to a particular option and instead are arg to main command itself,
+		details corresponding to these are stored in param2, param3 and param4. They key used
+		to store these details is given by this i.e. param5.
+	</li>
+	<li>
+		For example, if this arg was 'self', then in arrays param2, param3 and param4, 'self' would be used
+		as the key to store args to the main arg that don't belong to any particular option.
+	</li>
+</ol>
+	
+<h4>param6: shift count</h4>
 
 <ol>
 	<li>
@@ -172,11 +186,11 @@ command -v --new "file" create hello world lalala
 	</li>
 </ol>
 
-<h4>param6: terminator</h4>
+<h4>param7: terminator</h4>
 
 This is used to mark the end of the options. Like in the above <a href="#example">example</a>, ';' is used as the terminator.
 
-<h4>param7: No option indicator</h4>
+<h4>param8: No option indicator</h4>
 
 This tells to treat following arg as a normal arg even if it's
 an option.<br>
