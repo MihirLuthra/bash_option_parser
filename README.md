@@ -12,6 +12,9 @@
   <li>
     Supports optional arguments
   </li>
+	<li>
+    Supports variable arguments
+  </li>
   <li>
     Easy to use
   </li>
@@ -92,8 +95,9 @@ Corresponding to every option, a schema is passed which determines
 the patten in which the option receives arguments.
 There are 4 characters available to define the schema:
 <br>
-&nbsp;&nbsp;&nbsp;&nbsp;<b> 1</b> : Means argument is necessary                                          <br>
-&nbsp;&nbsp;&nbsp;&nbsp;<b>-1</b> : Means argument is optional (this can only be last element in schema) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;<b> 1 </b>: Means argument is necessary                                          <br>
+&nbsp;&nbsp;&nbsp;&nbsp;<b>-1 </b>: Means argument is optional (this can only be last element in schema) <br>
+&nbsp;&nbsp;&nbsp;&nbsp;<b>...</b>: Means variable length args (this can only be last element in schema) <br>
 &nbsp;&nbsp;&nbsp;&nbsp;<b> 0 </b>: Means doesn't receive any argument                                   <br>
 &nbsp;&nbsp;&nbsp;&nbsp;<b> S </b>: Is a sub-command                                                     <br>
 <br>
