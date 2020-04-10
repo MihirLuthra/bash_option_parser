@@ -232,13 +232,10 @@ command -n -- --
 		and returns:
 		<ul>
 			<li>
-				-1 : Invalid schema passed to function
-			</li>
-			<li>
 				1 : insufficient args are supplied for some particular option
 			</li>
 			<li>
-				2 : extra agrs supplied
+				2 : invalid schema passed to function
 			</li>
 		</ul>
 	</li>
