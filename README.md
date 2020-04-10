@@ -20,6 +20,13 @@
   </li>
 </ul>
 
+<h2>Requirements</h2>
+<ul>
+	<li>
+		Needs at least bash version 4.
+	</li>
+</ul>
+
 
 <h2>Example</h2>
 
