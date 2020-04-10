@@ -44,7 +44,7 @@ get_arg1() {
 #
 # retval:
 #   1 : invalid character
-#   2 : -1 used in between the schema but only last arg can be optional
+#   2 : -1/... used in between the schema but only last arg can be optional/variable
 #   3 : S/0 used in combination with others but they are to be used alone
 #
 is_schema_valid() {
@@ -59,7 +59,7 @@ is_schema_valid() {
 	local cnt=0
 
 	while [ -n "$schema" ] ; do
-		
+
 		((++cnt))
 
 		schema_element="$( get_arg1 "$schema" )"
@@ -70,10 +70,10 @@ is_schema_valid() {
 			1)
 				continue
 				;;
-			-1)
-				# optional arg can only be last arg
+			-1|'...')
+				# optional arg or variable args can only be last in schema
 				if [ -n "$schema" ] ; then
-					>&2 echo "Invalid schema $schema_copy: only the last arg can be optional"
+					>&2 echo "Invalid schema $schema_copy: only the last arg can be optional/variable"
 					return 2
 				fi
 				;;
@@ -124,6 +124,7 @@ option_parser_error_msg() {
 #
 #   1  : Means argument is necessary
 #   -1 : Means argument is optional (this can only be last element in schema)
+#   ... : Means variable length args (this can only be last element in schema)
 #   0  : Means doesn't receive any argumeny
 #   S  : Is a sub-command
 #
@@ -133,7 +134,7 @@ option_parser_error_msg() {
 #   -a needs at least one arg and can receive a second arg optionally
 #   -b doesn't need any args
 #   -c is a sub-command
-#  
+#
 #   Schema for -a = '1 -1'
 #   Schema for -b = '0'
 #   Schema for -c = 'S'
@@ -341,7 +342,7 @@ parse_options() {
 					arg_no=0
 
 					case $schema_element in
-						'1'|'-1'|'0')
+						'1'|'-1'|'0'|'...')
 							# $option_array_name[$passed_arg] needs to be made non-null.
 							eval $option_array_name\[\$current_option\]\=\"\$shift_count\"
 							;;
@@ -360,14 +361,21 @@ parse_options() {
 		else
 			next_is_not_opt=0
 		fi
-			
-			
+
+
 		if [ "$schema_element" = "1" ] || [ "$schema_element" = "-1" ] ; then
 			eval $args_array_name\[\$current_option,\$arg_no\]\+\="\"\$passed_arg\""
 			((arg_no++))
 			eval $args_cnt_array_name\[\$current_option\]="\"\$arg_no\""
 			schema_element="$( get_arg1 "$schema" )"
 			schema="$( shift_args "$schema" )"
+
+		elif [ "$schema_element" = '...' ]
+		then
+			eval $args_array_name\[\$current_option,\$arg_no\]\+\="\"\$passed_arg\""
+			((arg_no++))
+			eval $args_cnt_array_name\[\$current_option\]="\"\$arg_no\""
+
 		else
 			eval $args_array_name\[\$self_key_name,\$self_arg_no\]\+\="\"\$passed_arg\""
 			((self_arg_no++))

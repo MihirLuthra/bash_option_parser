@@ -6,7 +6,13 @@ readonly PROG_NAME="$(basename "$BASH_SOURCE")"
 
 usage() {
 
-	>&2 echo "$PROG_NAME -s|--search|--find arg1 arg2 [arg3] -m|--make|--create suboption|subopt ..."
+	>&2 printf "%s\n" \
+		"$PROG_NAME ..." \
+		"  [-s|--search|--find arg1 arg2 [arg3]]" \
+		"  [-m|--make|--create]" \
+		"  [-v|--var-args ...] " \
+		"  suboption|subopt [args]"
+
 	exit 1
 }
 
@@ -17,8 +23,9 @@ test_parser() {
 
 	parse_options \
 		',' 'OPTIONS' 'ARG_CNT' 'ARGS' 'self' '0' ';' '--'  \
-		'-s'        , '--search' , '--find'    '1 1 -1'     \
 		'-m'        , '--make'   , '--create'  '0'          \
+		'-s'        , '--search' , '--find'    '1 1 -1'     \
+		'-v'        , '--var-args'             '1 ...'      \
 		'suboption' , 'subopt'                 'S'          \
 		';' \
 		"$@"
@@ -44,4 +51,4 @@ test_parser() {
 
 }
 
-test_parser "$@" 
+test_parser "$@"
