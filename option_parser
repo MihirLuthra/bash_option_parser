@@ -106,7 +106,7 @@ option_parser_error_msg() {
 	local err_opt="$(eval echo \$\{$option_array\[error_opt\]\} )"
 
 	case "$error_code" in
-		-1)
+		2)
 			>&2 echo "Invalid schema for $err_opt"
 			;;
 		1)
@@ -244,6 +244,7 @@ option_parser_error_msg() {
 #
 #  FAILURE:
 #   1 : insufficient args are supplied for some particular option
+#   2 : invalid schema
 #
 parse_options() {
 
@@ -295,7 +296,7 @@ parse_options() {
 			option_array[$option]=$schema ; shift
 		else
 			eval $option_array_name\['error_opt'\]\=\"\$option\"
-			return -1
+			return 2
 		fi
 
 	done
