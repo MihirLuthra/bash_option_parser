@@ -308,6 +308,8 @@ parse_options() {
 	if [ -n "$*" ]
 	then
 		eval $option_array_name\[\$self_key_name\]\="1"
+	else
+		return 0
 	fi
 
 	# This loop parses the cmd line args
