@@ -3,24 +3,15 @@
 #
 # param1: input string
 #
-# Shifts args in a blank delimited
-# string.
+# Shifts args in string.
 # e.g., if input is '1 2 3', ouput is '2 3'
 # if input is '4', ouput is ''
 #
 shift_args() {
-	local arg_schema=$1
-
-	awk '{
-		for (i = 1 ; i <= NF - 1 ; ++i) {
-			$i=$(i+1)
-		}
-		$NF=""
-		NF--
-		printf $0
-	}' <<<"$arg_schema"
+	set -- $*
+	shift
+	echo -n "$@"
 }
-
 
 #
 # param1: input string
@@ -32,9 +23,8 @@ shift_args() {
 # if input is '' returns ''
 #
 get_arg1() {
-	local arg_schema=$1
-
-	awk '{printf $1}' <<<"$arg_schema"
+	set -- $*
+	echo -n $1
 }
 
 #
@@ -292,12 +282,7 @@ parse_options() {
 		schema=$1
 
 		# assign schema of the option as value
-		if is_schema_valid "$schema" ; then
-			option_array[$option]=$schema ; shift
-		else
-			eval $option_array_name\['error_opt'\]\=\"\$option\"
-			return 2
-		fi
+		option_array[$option]=$schema ; shift
 
 	done
 
