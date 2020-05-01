@@ -93,14 +93,14 @@ option_parser_error_msg() {
 
 	local error_code=$1 ; shift
 	local option_array=$1 ; shift
-	local err_opt="$(eval echo \$\{$option_array\[error_opt\]\} )"
+	local err_opt="$(eval printf \"\%\s\\n\" \$\{$option_array\[error_opt\]\} )"
 
 	case "$error_code" in
 		2)
-			>&2 echo "Invalid schema for $err_opt"
+			>&2 printf "%s\n" "Invalid schema for $err_opt"
 			;;
 		1)
-			>&2 echo "Insufficient args for $err_opt"
+			>&2 printf "%s\n" "Insufficient args for $err_opt"
 			;;
 	esac
 
