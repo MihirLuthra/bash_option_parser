@@ -1,5 +1,8 @@
 #! /usr/bin/env bash
 
+[ -n "$__OPTION_PARSER__" ] && return 0
+readonly __OPTION_PARSER__=1
+
 #
 # param1: input string
 #
@@ -10,7 +13,7 @@
 shift_args() {
 	set -- $*
 	shift
-	echo -n "$@"
+	printf "%s" "$@"
 }
 
 #
@@ -24,7 +27,7 @@ shift_args() {
 #
 get_arg1() {
 	set -- $*
-	echo -n $1
+	printf "%s" $1
 }
 
 #
