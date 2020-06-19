@@ -19,7 +19,7 @@ usage() {
 usage_suboption() {
 
 	>&2 printf "%s\n" \
-		"$PROG_NAME suboption ..." \
+		"$PROG_NAME suboption name1 [name2]" \
 		"  [-a|--apple]" \
 		"  [-u|--unix arg1 ...]" \
 		"  [-l|--linux arg1 arg2 [arg3]] "
@@ -29,16 +29,15 @@ usage_suboption() {
 
 
 test_parser() {
-
 	local last_arg
 	local error_code
 
 	parse_options \
-		',' 'OPTIONS' 'ARG_CNT' 'ARGS' 'self' '0' ';' '--'  \
-		'-m'        , '--make'   , '--create'  '0'          \
-		'-s'        , '--search' , '--find'    '1 1 -1'     \
-		'-v'        , '--var-args'             '1 ...'      \
-		'suboption' , 'subopt'                 'S'          \
+		'self'                                 '0'      \
+		'-m'        , '--make'   , '--create'  '0'      \
+		'-s'        , '--search' , '--find'    '1 1 -1' \
+		'-v'        , '--var-args'             '1 ...'  \
+		'suboption' , 'subopt'                 'S'      \
 		';' \
 		"$@"
 
@@ -46,7 +45,7 @@ test_parser() {
 	echo "retval = $error_code"
 
 	if [ $error_code -ne 0 ]; then
-		option_parser_error_msg "$error_code" 'OPTIONS'
+		option_parser_error_msg "$error_code"
 		usage
 	fi
 
@@ -72,13 +71,14 @@ test_parser() {
 		return 0
 	fi
 
-	parse_options \
-		',' 'OPTIONS_S' 'ARG_CNT_S' 'ARGS_S' 'self' "$shift_cnt" ';' '--'  \
-		                          \
-		'-a' , '--apple' '0'      \
-		'-l' , '--linux' '1 1 -1' \
-		'-u' , '--unix'  '1 ...'  \
-		                          \
+	parse_options_detailed \
+		',' 'OPTIONS_S' 'ARG_CNT_S' 'ARGS_S' "$shift_cnt" ';' '--' 'error_opt' \
+		                           \
+		'self'            '1 -1'   \
+		'-a'  , '--apple' '0'      \
+		'-l'  , '--linux' '1 1 -1' \
+		'-u'  , '--unix'  '1 ...'  \
+		                           \
 		';' \
 		"$@"
 
@@ -89,7 +89,7 @@ test_parser() {
 	echo "retval = $error_code"
 
 	if [ $error_code -ne 0 ]; then
-		option_parser_error_msg "$error_code" 'OPTIONS_S'
+		option_parser_error_msg_detailed "$error_code" 'OPTIONS_S' 'ARG_CNT_S' 'ARGS_S' 'error_opt'
 		usage_suboption
 	fi
 
