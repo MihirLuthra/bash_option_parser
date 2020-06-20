@@ -112,7 +112,6 @@ option_parser_error_msg_detailed() {
 		3)
 			# this error code only occurs for self
 			self_last_arg="$(eval printf \"\%\s\\n\" \$\{$args_cnt_array_name\[\$err_opt\]\} )"
-			echo ":$self_last_arg:"
 			((self_last_arg--))
 			extra_arg="$(eval printf \"\%\s\\n\" \$\{$args_array_name\[\$err_opt\,\$self_last_arg]\} )"
 			>&2 printf "%s\n" "Extra arg supplied: $extra_arg"
@@ -216,12 +215,13 @@ option_parser_error_msg_detailed() {
 #         -v/--ver/--version, c/create & -e/--eat, then
 #
 #    parse_options_detailed \
-#      '~' 'OPTIONS' 'ARG_CNT' 'ARGS' 'self' '0' ';' \
-#      'c'  '~' 'create'                'S'      \
-#      '-e' '~' '--eat'                 '1 1 -1' \
-#      '-n' '~' '--new'                 '1'      \
-#      '-v' '~' '--version' '~' '--ver' '0'      \
-#      ';'                                       \
+#      '~' 'OPTIONS' 'ARG_CNT' 'ARGS' '0' ';'      \
+#      'self'                             '1 1 -1' \
+#      'c'    '~' 'create'                'S'      \
+#      '-e'   '~' '--eat'                 '1 1 -1' \
+#      '-n'   '~' '--new'                 '1'      \
+#      '-v'   '~' '--version' '~' '--ver' '0'      \
+#      ';'                                         \
 #      "$@"
 #   where ';' marked the end of possible options.
 #
@@ -238,16 +238,22 @@ option_parser_error_msg_detailed() {
 #   achieved like:
 #     command -n -- --
 #
-# self key name (first options to parse_options_detailed_detailed):
+# param8: error_opt
+#   This is the key that would be used in param2 array
+#   to store the name of the option which caused the error.
+#
+# self key name (first options to parse_options_detailed):
 #  If the options passed don't belong to a particular option
 #  and instead are arg to main command itself, details corresponding
 #  to these are stored in param2, param3 and param4. They key used
-#  to store these details is given by this i.e. param5.
+#  to store these details is the first option name given after param7.
 #  Similar to example in param4 above if args 'bread', 'butter' and 'milk'
-#  were passed directly to main arg and param5 was 'self', then
+#  were passed directly to main arg and first option was 'self', then
 #   ARGS[self,0]=bread
 #   ARGS[self,1]=butter
 #   ARGS[self,2]=milk
+#  As the self's arg schema only allows upto 3 args, passing any more
+#  args would raise an error which can be printed by option_parser_error_msg_detailed
 #
 # retval:
 #
@@ -257,6 +263,7 @@ option_parser_error_msg_detailed() {
 #  FAILURE:
 #   1 : insufficient args are supplied for some particular option
 #   2 : invalid schema
+#   3 : extra arg supplied
 #
 parse_options_detailed() {
 
@@ -295,6 +302,7 @@ parse_options_detailed() {
 	local self_schema_element
 	local shift_count=-1
 
+	# First option is self
 	if [ "$1" != "$terminator" ]
 	then
 		self_key_name=$1
