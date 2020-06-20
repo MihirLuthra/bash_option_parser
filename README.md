@@ -30,13 +30,13 @@
 
 <h2>Example</h2>
 
-This is a simple example to show basic functionailty. Checkout <a href="option_parser_usage_example">option_parser_usage_example</a> for a better understanding (preferably try executing on you system).
+This is a simple example to show basic functionailty. Checkout <a href="example">example</a> for a better understanding (preferably try executing on you system).
 
 Consider a sample command named `sample`.
 It accepts options as per the following usage format:
 
 ```
-sample 
+sample <name1> <name2> [<name3>]
     -s|--search|--find arg1 arg2 [arg3]
     -m|--make|--create
 ```
@@ -49,16 +49,17 @@ We can parse options as per the above criteria as follows:
 source ./option_parser
 
 parse_options \
-		',' 'OPTIONS' 'ARG_CNT' 'ARGS' 'self' '0' ';' '--'  \
-		'-s'        , '--search' , '--find'    '1 1 -1'     \
-		'-m'        , '--make'   , '--create'  '0'          \
-		';' \
-		"$@"
+	'self'	                               '1 1 -1'     \
+	'-s'        , '--search' , '--find'    '1 1 -1'     \
+	'-m'        , '--make'   , '--create'  '0'          \
+	';' \
+	"$@"
 
 retval=$?
 
 if [ $retval -ne 0 ]; then
-	option_parser_error_msg "$retval" 'OPTIONS'
+	# will print a meaningful message on error
+	option_parser_error_msg "$retval"
 	exit 1
 fi
 
@@ -94,7 +95,7 @@ if [ -n "${OPTIONS[-s]}" ]; then
 fi
 ```
 
-<h2>Params Explaination</h2>
+<h2>Params of parse_options_detailed()</h2>
 
 Before looking into params, let's understand what is schema for options.
 
@@ -167,21 +168,8 @@ param1 tells what separator you want to use to separate alias names.
 	</li>
 </ol>
 	
-<h4>param5: self key name</h4>
-
-<ol>
-	<li>
-		If the options passed don't belong to a particular option and instead are arg to main command itself,
-		details corresponding to these are stored in param2, param3 and param4. They key used
-		to store these details is given by this i.e. param5.
-	</li>
-	<li>
-		For example, if this arg was 'self', then in arrays param2, param3 and param4, 'self' would be used
-		as the key to store args to the main arg that don't belong to any particular option.
-	</li>
-</ol>
 	
-<h4>param6: shift count</h4>
+<h4>param5: shift count</h4>
 
 <ol>
 	<li>
@@ -190,7 +178,7 @@ param1 tells what separator you want to use to separate alias names.
 <pre>
 command -v --new "file" create hello world lalala
 </pre>
-		and you want to parse args after 'create', so nshift should be 4.
+	and you want to parse args after 'create', so nshift should be 4.
    	If would shift initial 4 args and start parsing after create.
 	</li>
 	<li>
@@ -199,11 +187,11 @@ command -v --new "file" create hello world lalala
 	</li>
 </ol>
 
-<h4>param7: terminator</h4>
+<h4>param6: terminator</h4>
 
 This is used to mark the end of the options. Like in the above <a href="#example">example</a>, ';' is used as the terminator.
 
-<h4>param8: No option indicator</h4>
+<h4>param7: No option indicator</h4>
 
 This tells to treat following arg as a normal arg even if it's
 an option.<br>
@@ -221,6 +209,31 @@ achieved like: <br>
 command -n -- --
 </pre>
 
+<h4>param8: error opt</h4>
+
+<ol>
+	<li>
+		This is the key that would be used in param2 array
+		to store the name of the option which caused the error.
+	</li>
+</ol>
+
+<h4>self key name</h4>
+
+<ol>
+	<li>
+		The first key that is passed to parse_options is for main command itself.
+	</li>
+	<li>
+		If the options passed don't belong to a particular option and instead are arg to main command itself,
+		details corresponding to these are stored in param2, param3 and param4.
+	</li>
+	<li>
+		For example, if this arg was 'self', then in arrays param2, param3 and param4, 'self' would be used
+		as the key to store args to the main arg that don't belong to any particular option.
+	</li>
+</ol>
+
 <h4>retval</h4>
 
 <ol>
@@ -228,7 +241,7 @@ command -n -- --
 		SUCCESS: Returns 0
 	</li>
 	<li>
-		FAILURE: It sets the key "error_opt" in param1 array to the option name for which the error occured
+		FAILURE: It sets the key param8 in param1 array to the option name for which the error occured
 		and returns:
 		<ul>
 			<li>
@@ -237,6 +250,24 @@ command -n -- --
 			<li>
 				2 : invalid schema passed to function
 			</li>
+			<li>
+				3 : extra arg supplied
+			</li>
 		</ul>
 	</li>
 </ol>
+
+<h2>parse_options() and option_parser_error_msg()</h2>
+
+The above two are abstractions of `parse_options_detailed()` and `option_parser_error_msg_detailed()` and
+are defined as follows:
+
+```
+parse_options() {
+       parse_options_detailed ',' 'OPTIONS' 'ARG_CNT' 'ARGS' '0' ';' '--' 'error_opt' "$@"
+}
+
+option_parser_error_msg() {
+       option_parser_error_msg_detailed "$1" 'OPTIONS' 'ARG_CNT' 'ARGS' 'error_opt'
+}
+```
