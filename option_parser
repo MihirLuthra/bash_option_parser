@@ -354,7 +354,7 @@ parse_options_detailed() {
 				passed_arg=${alias_array[$passed_arg]}
 			fi
 
-			if [ -n "${option_array[$passed_arg]}" ] ; then
+			if [ -n "${option_array[$passed_arg]}" ] && [ "$passed_arg" != "$self_key_name" ]; then
 				prev_opt=$current_option
 				current_option=$passed_arg
 
