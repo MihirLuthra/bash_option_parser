@@ -7,7 +7,7 @@ readonly PROG_NAME="$(basename "$BASH_SOURCE")"
 usage() {
 
 	>&2 printf "%s\n" \
-		"$PROG_NAME ..." \
+		"$PROG_NAME arg1 arg2 ..." \
 		"  [-s|--search|--find arg1 arg2 [arg3]]" \
 		"  [-m|--make|--create]" \
 		"  [-v|--var-args ...] " \
@@ -33,11 +33,11 @@ test_parser() {
 	local error_code
 
 	parse_options \
-		'self'                                 '0'      \
-		'-m'        , '--make'   , '--create'  '0'      \
-		'-s'        , '--search' , '--find'    '1 1 -1' \
-		'-v'        , '--var-args'             '1 ...'  \
-		'suboption' , 'subopt'                 'S'      \
+		'self'                                 '1 1 ...' \
+		'-m'        , '--make'   , '--create'  '0'       \
+		'-s'        , '--search' , '--find'    '1 1 -1'  \
+		'-v'        , '--var-args'             '1 ...'   \
+		'suboption' , 'subopt'                 'S'       \
 		';' \
 		"$@"
 
