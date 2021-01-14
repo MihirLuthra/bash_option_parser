@@ -56,7 +56,7 @@ We can parse options as per the above criteria as follows:
 source ./option_parser
 
 parse_options \
-	'self'	                               '1 1 -1'     \
+	'sample'                               '1 1 -1'     \
 	'-s'        , '--search' , '--find'    '1 1 -1'     \
 	'-m'        , '--make'   , '--create'  '0'          \
 	';' \
@@ -129,13 +129,13 @@ So let's say we have 3 options, `-a`, `-b` and `-c`.
 <h2>parse_options()</h2>
 
 After this functions is called, 3 associative arrays are set to hold information about args. These are
-`OPTIONS`, `ARG_CNT` and `ARGS`.
+`OPTIONS`, `ARG_CNT` and `ARGS`. These names can be changed by using [parse_options_detailed()](#parse_options_detailed) instead.
 
 We will use the [above example](#example) to explain their usage:
 
 ```bash
 parse_options \
-	'self'	                               '1 1 -1'     \
+	'sample'                               '1 1 -1'     \
 	'-s'        , '--search' , '--find'    '1 1 -1'     \
 	'-m'        , '--make'   , '--create'  '0'          \
 	';' \
@@ -157,6 +157,9 @@ In the above setup, we pass options in order like:
 ```
 parse_options <option-1> <schema> <option-2> <schema> ; $@
 ```
+
+First option, i.e. <option-1> __must__ always be the key name that you want to use to denote the program itself.
+Like in the above example it is `sample`.
 
 <b>Comma(,)</b> is used to separate alternative names. <b>Semicolon(;)</b> is used to mark the end of options. After
 semicolon, `$@` is passed.
@@ -189,7 +192,7 @@ One special key, `error_opt` is used to store any errors that occured while pars
 [option_parser_error_msg](#option_parser_error_msg) to print a relevant error message.
 
 <h3>ARG_CNT</h3>
-If the passed option received arguments, this array store the number of args received corresponding to that options.
+If the passed option received arguments, this array stores the number of args received corresponding to that options.
 
 For example, if we called the `sample` command as:
 
@@ -201,7 +204,7 @@ It will set `ARG_CNT` array as:
 
 ```
 ARG_CNT[self] = 2
-ARG_CNT[-m] = # NOT SET BECAUSE IT DIDN'T RECEIVE ANY ARGUMENT
+ARG_CNT[-m] = # NOT SET BECAUSE IT DIDN'T RECEIVE ANY ARGUMENTS
 ARG_CNT[-s] = 3
 ```
 
@@ -230,6 +233,8 @@ ARGS[-s,2] = 3
 This can be used for printing error messages in case the args passed by the user are in wrong format. This function
 takes the exit status of [parse_options](#parse_options) as argument and prints the corresponding error message.
 This uses `OPTIONS[error_opt]` to check if any error occured.
+
+<hr>
 
 The above two are abstractions of `parse_options_detailed()` and `option_parser_error_msg_detailed()` and
 are defined as follows:
