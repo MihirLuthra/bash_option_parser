@@ -252,7 +252,7 @@ option_parser_error_msg() {
 Arguments accepted by `parse_options_detailed()` and `option_parser_error_msg_detailed()` are explained below. These can be
 used if you want to change the separator, associative array name, etc.
 
-<h2>Params of parse_options_detailed()</h2>
+<h2>parse_options_detailed()</h2>
 
 <h4>param1: Alias Separator</h4>
 
