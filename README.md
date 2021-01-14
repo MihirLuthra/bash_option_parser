@@ -158,7 +158,7 @@ In the above setup, we pass options in order like:
 parse_options <option-1> <schema> <option-2> <schema> ; $@
 ```
 
-First option, i.e. <option-1> __must__ always be the key name that you want to use to denote the program itself.
+First option, i.e. `<option-1>` __must__ always be the key name that you want to use to denote the program itself.
 Like in the above example it is `sample`.
 
 <b>Comma(,)</b> is used to separate alternative names. <b>Semicolon(;)</b> is used to mark the end of options. After
@@ -179,7 +179,7 @@ sample 1 2 -m -s 1 2 3
 It will set `OPTIONS` array as:
 
 ```
-OPTIONS[self] = 0
+OPTIONS[sample] = 0
 OPTIONS[-m] = 2
 OPTIONS[-s] = 3
 ```
@@ -203,7 +203,7 @@ sample 1 2 -m -s 1 2 3
 It will set `ARG_CNT` array as:
 
 ```
-ARG_CNT[self] = 2
+ARG_CNT[sample] = 2
 ARG_CNT[-m] = # NOT SET BECAUSE IT DIDN'T RECEIVE ANY ARGUMENTS
 ARG_CNT[-s] = 3
 ```
@@ -220,8 +220,8 @@ sample 11 22 -m -s 1 2 3
 It will set `ARGS` array as:
 
 ```
-ARGS[self,0] = 11
-ARGS[self,1] = 22
+ARGS[sample,0] = 11
+ARGS[sample,1] = 22
 
 ARGS[-s,0] = 1
 ARGS[-s,1] = 2
