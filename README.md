@@ -41,7 +41,7 @@ sample <name1> <name2> [<name3>]
     -m|--make|--create
 ```
 
-To tell the parser that `sample` needs 2 arguments and 1 optional argument i.e. <name1>, <name2> and [<name3>],
+To tell the parser that `sample` needs 2 arguments and 1 optional argument i.e. `<name1>`, `<name2>` and `[<name3>]`,
 we pass a string like `'1 1 -1'`.
 	
 In `'1 1 -1'`, `1` denotes a mandatory arg and `-1` denotes an optional arg. This is called schema in this parser.
