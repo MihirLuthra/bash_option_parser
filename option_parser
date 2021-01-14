@@ -1,5 +1,8 @@
 #! /usr/bin/env bash
 
+[ -n "$__OPTION_PARSER__" ] && return 0
+readonly __OPTION_PARSER__=1
+
 #
 # param1: input string
 #
@@ -85,17 +88,35 @@ is_schema_valid() {
 
 #
 # param1: error_code
-#   code returned by parse_options()
+#   code returned by parse_options_detailed()
 #
 # param2: options_array
 #
-option_parser_error_msg() {
+# param3: args_cnt_array_name
+#
+# param4 : args_array_name
+#
+option_parser_error_msg_detailed() {
 
 	local error_code=$1 ; shift
 	local option_array=$1 ; shift
-	local err_opt="$(eval printf \"\%\s\\n\" \$\{$option_array\[error_opt\]\} )"
+	local args_cnt_array_name=$1 ; shift
+	local args_array_name=$1 ; shift
+	local error_opt=$1
+	local err_opt="$(eval printf \"\%\s\\n\" \$\{$option_array\[\$error_opt\]\} )"
+	local self_arg_cnt
+	local self_last_arg
+	local extra_arg
 
 	case "$error_code" in
+		3)
+			# this error code only occurs for self
+			self_last_arg="$(eval printf \"\%\s\\n\" \$\{$args_cnt_array_name\[\$err_opt\]\} )"
+			((self_last_arg--))
+			extra_arg="$(eval printf \"\%\s\\n\" \$\{$args_array_name\[\$err_opt\,\$self_last_arg]\} )"
+			>&2 printf "%s\n" "Extra arg supplied: $extra_arg"
+			;;
+
 		2)
 			>&2 printf "%s\n" "Invalid schema for $err_opt"
 			;;
@@ -153,7 +174,7 @@ option_parser_error_msg() {
 #   command -v -t arg -s create hello world -abc
 #   So in this case OPTIONS[create] would contain value 5 because `shift 5`
 #   would result in "hello world -abc" which are the args of sub-command.
-#   The same command can be passed to parse_options again with shift count 5
+#   The same command can be passed to parse_options_detailed again with shift count 5
 #   to parse the sub-command.
 #   In case of any other type of options OPTIONS[<option_name>] would contain a single
 #   space "1" in order to make it non-null.
@@ -179,18 +200,7 @@ option_parser_error_msg() {
 #   ARGS[-e,1]=butter
 #   ARGS[-e,2]=milk
 #
-# param5: self key name
-#  If the options passed don't belong to a particular option
-#  and instead are arg to main command itself, details corresponding
-#  to these are stored in param2, param3 and param4. They key used
-#  to store these details is given by this i.e. param5.
-#  Similar to example in param4 above if args 'bread', 'butter' and 'milk'
-#  were passed directly to main arg and param5 was 'self', then
-#   ARGS[self,0]=bread
-#   ARGS[self,1]=butter
-#   ARGS[self,2]=milk
-#
-# param6: nshift
+# param5: nshift
 #   This is the number of shifts made before parsing args.
 #   e.g., If cmdline args were like:
 #     command -v --new "file" create hello world lalala
@@ -199,22 +209,23 @@ option_parser_error_msg() {
 #   This is useful for parsing subcommands. We get the number of shifts
 #   required from value of OPTIONS[] as discussed in param2.
 #
-# param7: terminator
+# param6: terminator
 #   This is the character which marks the end of the possible options
 #   e.g., if terminator is ';' and there were 4 options, -n/--new,
 #         -v/--ver/--version, c/create & -e/--eat, then
 #
-#    parse_options \
-#      '~' 'OPTIONS' 'ARG_CNT' 'ARGS' 'self' '0' ';' \
-#      'c'  '~' 'create'                'S'      \
-#      '-e' '~' '--eat'                 '1 1 -1' \
-#      '-n' '~' '--new'                 '1'      \
-#      '-v' '~' '--version' '~' '--ver' '0'      \
-#      ';'                                       \
+#    parse_options_detailed \
+#      '~' 'OPTIONS' 'ARG_CNT' 'ARGS' '0' ';'      \
+#      'self'                             '1 1 -1' \
+#      'c'    '~' 'create'                'S'      \
+#      '-e'   '~' '--eat'                 '1 1 -1' \
+#      '-n'   '~' '--new'                 '1'      \
+#      '-v'   '~' '--version' '~' '--ver' '0'      \
+#      ';'                                         \
 #      "$@"
 #   where ';' marked the end of possible options.
 #
-# param8: no_opt_indicator
+# param7: no_opt_indicator
 #   Treat following arg is a normal arg even if it's
 #   an option
 #   e.g., Let's say no_opt is '--'.
@@ -227,6 +238,23 @@ option_parser_error_msg() {
 #   achieved like:
 #     command -n -- --
 #
+# param8: error_opt
+#   This is the key that would be used in param2 array
+#   to store the name of the option which caused the error.
+#
+# self key name (first options to parse_options_detailed):
+#  If the options passed don't belong to a particular option
+#  and instead are arg to main command itself, details corresponding
+#  to these are stored in param2, param3 and param4. They key used
+#  to store these details is the first option name given after param7.
+#  Similar to example in param4 above if args 'bread', 'butter' and 'milk'
+#  were passed directly to main arg and first option was 'self', then
+#   ARGS[self,0]=bread
+#   ARGS[self,1]=butter
+#   ARGS[self,2]=milk
+#  As the self's arg schema only allows upto 3 args, passing any more
+#  args would raise an error which can be printed by option_parser_error_msg_detailed
+#
 # retval:
 #
 #  SUCCESS:
@@ -235,18 +263,19 @@ option_parser_error_msg() {
 #  FAILURE:
 #   1 : insufficient args are supplied for some particular option
 #   2 : invalid schema
+#   3 : extra arg supplied
 #
-parse_options() {
+parse_options_detailed() {
 
 	# separator used to add alias names of options
 	local separator=$1 ; shift
 	local option_array_name=$1 ; shift
 	local args_cnt_array_name=$1 ; shift
 	local args_array_name=$1 ; shift
-	local self_key_name=$1 ; shift
 	local nshift=$1 ; shift
 	local terminator=$1 ; shift
 	local no_opt_indicator=$1 ; shift
+	local error_opt=$1 ; shift
 
 	# stores options as keys and their arg schema as value
 	declare -A option_array
@@ -268,7 +297,16 @@ parse_options() {
 	local arg_no=0
 	local self_arg_no=0
 	local next_is_not_opt=0
+	local self_key_name
+	local self_schema
+	local self_schema_element
 	local shift_count=-1
+
+	# First option is self
+	if [ "$1" != "$terminator" ]
+	then
+		self_key_name=$1
+	fi
 
 	# store all options as keys in `option_array[]` with schema as their value
 	until [ "$1" = "$terminator" ] ; do
@@ -290,12 +328,14 @@ parse_options() {
 
 	shift $nshift
 
-	if [ -n "$*" ]
+	if [ -z "$*" ]
 	then
-		eval $option_array_name\[\$self_key_name\]\="1"
-	else
 		return 0
 	fi
+
+	self_schema=${option_array[$self_key_name]}
+	self_schema_element="$( get_arg1 "$self_schema" )"
+	self_schema="$( shift_args "$self_schema" )"
 
 	# This loop parses the cmd line args
 	for passed_arg in "$@" ; do
@@ -314,14 +354,14 @@ parse_options() {
 				passed_arg=${alias_array[$passed_arg]}
 			fi
 
-			if [ -n "${option_array[$passed_arg]}" ] ; then
+			if [ -n "${option_array[$passed_arg]}" ] && [ "$passed_arg" != "$self_key_name" ]; then
 				prev_opt=$current_option
 				current_option=$passed_arg
 
 				if [ "$schema_element" = "1" ]; then
 					# if args of some other option were being processed
 					# but another option was passed in between
-					eval $option_array_name\['error_opt'\]\=\"\$prev_opt\"
+					eval $option_array_name\[\$error_opt\]\=\"\$prev_opt\"
 					return 1
 				else
 					schema=${option_array[$passed_arg]}
@@ -368,14 +408,49 @@ parse_options() {
 			eval $args_array_name\[\$self_key_name,\$self_arg_no\]\+\="\"\$passed_arg\""
 			((self_arg_no++))
 			eval $args_cnt_array_name\[\$self_key_name\]="\"\$self_arg_no\""
+
+			if [ "$self_schema_element" = "1" ] || [ "$self_schema_element" = "-1" ] ; then
+				self_schema_element="$( get_arg1 "$self_schema" )"
+				self_schema="$( shift_args "$self_schema" )"
+			elif [ "$self_schema_element" != "..." ] ; then
+				eval $option_array_name\[\$error_opt\]\=\"\$self_key_name\"
+				return 3
+			fi
+
+			if [ $self_arg_no -eq 1 ] ; then
+				eval $option_array_name\[\$self_key_name\]\=\"\$shift_count\"
+			fi
 		fi
 
 	done
 
 	if [ "$schema_element" = "1" ] ; then
-		eval $option_array_name\['error_opt'\]\=\"\$current_option\"
+		eval $option_array_name\[\$error_opt\]\=\"\$current_option\"
 		return 1
 	fi
 
+	if [ "$self_schema_element" = "1" ] ; then
+		eval $option_array_name\[\$error_opt\]\=\"\$self_key_name\"
+		return 1
+	fi
 	return 0
+}
+
+
+#
+# This is just a higher level abstraction
+# for parse_options_detailed() giving default names
+# to the associative arrays used
+#
+parse_options() {
+       parse_options_detailed ',' 'OPTIONS' 'ARG_CNT' 'ARGS' '0' ';' '--' 'error_opt' "$@"
+}
+
+#
+# This is just a higher level abstraction
+# for option_parser_error_msg_detailed() giving default names
+# to the associative arrays used
+#
+option_parser_error_msg() {
+       option_parser_error_msg_detailed "$1" 'OPTIONS' 'ARG_CNT' 'ARGS' 'error_opt'
 }
