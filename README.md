@@ -30,7 +30,7 @@
 
 <h2>Example</h2>
 
-This is a simple example to show basic functionailty. Checkout <a href="example">example</a> for a better understanding (preferably try executing on you system).
+This is a simple example to show basic functionailty. Checkout <a href="example">example</a> for a better understanding.
 
 Consider a sample command named `sample`.
 It accepts options as per the following usage format:
@@ -40,6 +40,13 @@ sample <name1> <name2> [<name3>]
     -s|--search|--find arg1 arg2 [arg3]
     -m|--make|--create
 ```
+
+To tell the parser that `sample` needs 2 arguments and 1 optional argument i.e. <name1>, <name2> and [<name3>],
+we pass a string like `'1 1 -1'`.
+	
+In `'1 1 -1'`, `1` denotes a mandatory arg and `-1` denotes an optional arg. This is called schema in this parser.
+Similarly, `...`, 'S' and `0` are for variable args, suboption and no args respectively. See complete [explaination](#schema) for
+more details.
 
 We can parse options as per the above criteria as follows:
 
@@ -70,34 +77,30 @@ fi
 #
 
 if [ -n "${OPTIONS[-s]}" ]; then
-  
-  echo "-s option was passed"
 
-  # cnt_args_passed contains the number of args the option received
-  cnt_args_passed=${ARG_CNT[-s]:-0}
+	echo "-s option was passed"
 
-  # print the first arg:
-  echo "${ARGS[-s,0]}"
-  
-  # print the second arg:
-  echo "${ARGS[-s,1]}"
-  
-  #
-  # As 3rd arg is optional, we can check if
-  # cnt_args_passed is equal to 3
-  #
-  
-  if [ $cnt_args_passed -eq 3 ]; then
-    # print the third arg:
-    echo "${ARGS[-s,2]}"
-  fi
-  
+	# cnt_args_passed contains the number of args the option received
+	cnt_args_passed=${ARG_CNT[-s]:-0}
+
+	# print the first arg:
+	echo "${ARGS[-s,0]}"
+
+	# print the second arg:
+	echo "${ARGS[-s,1]}"
+
+	#
+	# As 3rd arg is optional, we can check if
+	# cnt_args_passed is equal to 3
+	#
+
+	if [ $cnt_args_passed -eq 3 ]; then
+		# print the third arg:
+		echo "${ARGS[-s,2]}"
+	fi
+
 fi
 ```
-
-<h2>Params of parse_options_detailed()</h2>
-
-Before looking into params, let's understand what is schema for options.
 
 <h4>Schema</h4>
 
@@ -122,6 +125,129 @@ So let's say we have 3 options, `-a`, `-b` and `-c`.
 &nbsp;&nbsp;&nbsp;&nbsp;Schema for `-a` = `'1 -1'` <br>
 &nbsp;&nbsp;&nbsp;&nbsp;Schema for `-b` = `'0'`    <br>
 &nbsp;&nbsp;&nbsp;&nbsp;Schema for `-c` = `'S'`    <br>
+
+<h2>parse_options()</h2>
+
+After this functions is called, 3 associative arrays are set to hold information about args. These are
+`OPTIONS`, `ARG_CNT` and `ARGS`.
+
+We will use the [above example](#example) to explain their usage:
+
+```bash
+parse_options \
+	'self'	                               '1 1 -1'     \
+	'-s'        , '--search' , '--find'    '1 1 -1'     \
+	'-m'        , '--make'   , '--create'  '0'          \
+	';' \
+	"$@"
+```
+
+Here the format goes as follows:
+
+```text
+parse_options \
+	     '-s'        ,        '--search'          ,        '--find'         '1 1 -1'
+	<option-name> <comma> <alternative-name-1> <comma> <alternative-name-2> <schema>
+	<semicolon>
+	<args passed by user i.e. $@>
+```
+
+In the above setup, we pass options in order like:
+
+```
+parse_options <option-1> <schema> <option-2> <schema> ; $@
+```
+
+<b>Comma(,)</b> is used to separate alternative names. <b>Semicolon(;)</b> is used to mark the end of options. After
+semicolon, `$@` is passed.
+
+After the call, the following associative arrays are set:
+
+<h3>OPTIONS</h3>
+If an option is passed, key corresponding to it is set in `OPTIONS[]` and it stores the shift count needed to
+reach that arg.
+
+For example, if we called the `sample` command as:
+
+```
+sample 1 2 -m -s 1 2 3
+```
+
+It will set `OPTIONS` array as:
+
+```
+OPTIONS[self] = 0
+OPTIONS[-m] = 2
+OPTIONS[-s] = 3
+```
+
+They are generally used just to check if the particular option was passed or not. Like to check if `-s` is passed, we do
+`[ -n "${OPTIONS[-s]}" ]`. Their value which contains the number of `shift` needed to reach them only comes handy in case of
+suboptions. To see how this can be used in suboptions, check the code in <a href="example">this example</a>.
+
+One special key, `error_opt` is used to store any errors that occured while parsing user args. This is used by 
+[option_parser_error_msg](#option_parser_error_msg) to print a relevant error message.
+
+<h3>ARG_CNT</h3>
+If the passed option received arguments, this array store the number of args received corresponding to that options.
+
+For example, if we called the `sample` command as:
+
+```
+sample 1 2 -m -s 1 2 3
+```
+
+It will set `ARG_CNT` array as:
+
+```
+ARG_CNT[self] = 2
+ARG_CNT[-m] = # NOT SET BECAUSE IT DIDN'T RECEIVE ANY ARGUMENT
+ARG_CNT[-s] = 3
+```
+
+<h3>ARGS</h3>
+This array is set in a 2D-array-like format to store the args received.
+
+For example, if we called the `sample` command as:
+
+```
+sample 11 22 -m -s 1 2 3
+```
+
+It will set `ARGS` array as:
+
+```
+ARGS[self,0] = 11
+ARGS[self,1] = 22
+
+ARGS[-s,0] = 1
+ARGS[-s,1] = 2
+ARGS[-s,2] = 3
+```
+
+<h2>option_parser_error_msg()</h2>
+
+This can be used for printing error messages in case the args passed by the user are in wrong format. This function
+takes the exit status of [parse_options](#parse_options) as argument and prints the corresponding error message.
+This uses `OPTIONS[error_opt]` to check if any error occured.
+
+The above two are abstractions of `parse_options_detailed()` and `option_parser_error_msg_detailed()` and
+are defined as follows:
+
+```
+parse_options() {
+       parse_options_detailed ',' 'OPTIONS' 'ARG_CNT' 'ARGS' '0' ';' '--' 'error_opt' "$@"
+}
+
+option_parser_error_msg() {
+       option_parser_error_msg_detailed "$1" 'OPTIONS' 'ARG_CNT' 'ARGS' 'error_opt'
+}
+```
+
+Arguments accepted by `parse_options_detailed()` and `option_parser_error_msg_detailed()` are explained below. These can be
+used if you want to change the separator, associative array name, etc.
+
+<h2>Params of parse_options_detailed()</h2>
 
 <h4>param1: Alias Separator</h4>
 
@@ -256,18 +382,3 @@ command -n -- --
 		</ul>
 	</li>
 </ol>
-
-<h2>parse_options() and option_parser_error_msg()</h2>
-
-The above two are abstractions of `parse_options_detailed()` and `option_parser_error_msg_detailed()` and
-are defined as follows:
-
-```
-parse_options() {
-       parse_options_detailed ',' 'OPTIONS' 'ARG_CNT' 'ARGS' '0' ';' '--' 'error_opt' "$@"
-}
-
-option_parser_error_msg() {
-       option_parser_error_msg_detailed "$1" 'OPTIONS' 'ARG_CNT' 'ARGS' 'error_opt'
-}
-```
