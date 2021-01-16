@@ -466,14 +466,6 @@ parse_options_detailed() {
 	# contains original name of option
 	declare -A alias_array
 
-	# mapping from option name to alias names.
-	# it is in a 2D array-like format.
-	# e.g, For an option -a with aliases --abc and --efg,
-	# aliases[-a] = 2 # count
-	# aliases[-a,0] = --abc
-	# aliases[-a,1] = --efg
-	declare -A aliases
-
 	declare -gA $option_array_name
 	declare -gA $args_array_name
 	declare -gA $args_cnt_array_name
