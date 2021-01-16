@@ -87,6 +87,133 @@ is_schema_valid() {
 }
 
 #
+# Used by print_usage() to print arg placeholders as per schema
+#
+# Following is a list of what it prints for various schema elements:
+#    1  -> <arg<count>>, e.g., <arg4>
+#   -1  -> [<arg<count>>], e.g., [<arg3>]
+#    S  -> [<args>]
+#    0  -> Prints nothing
+#   ... -> ...
+#
+# For example, if schema is '1 1 -1', it will print: <arg1> <arg2> [<arg3>]
+#
+# param1: schema
+#
+# retval:
+#  SUCCESS:
+#   0 : if printing was success
+#
+#  FAILURE:
+#   1 : Invalid schema elements
+#
+print_as_per_schema() {
+	local schema=$1
+	local schema_copy=$schema
+	local schema_element
+	local cnt=0
+
+	while [ -n "$schema" ] ; do
+
+		((++cnt))
+
+		schema_element="$( get_arg1 "$schema" )"
+		schema="$( shift_args "$schema" )"
+
+		case "$schema_element" in
+
+			1)
+				printf "<arg$cnt> "
+				;;
+			-1)
+				printf "[<arg$cnt>] "
+				;;
+			'...')
+				printf '... '
+				;;
+			0)
+				return 0
+				;;
+			S)
+				printf "[<args>] "
+				;;
+			*)
+				return 1
+				;;
+		esac
+
+	done
+
+	return 0
+}
+
+#
+# Prints usage as per option data and alias data.
+#
+# param1: self_key_name
+#   It is the key used to address the main command.
+#   This is the first option passed to parse_options_detailed()
+#
+# param2: option_data_array_name
+#   This is the same name that is passed to parse_options_detailed().
+#   Array with this name is populated by parse_options_detailed() and
+#   then can be passed to this function
+#
+# param3: alias_data_array_name
+#   This is the same name that is passed to parse_options_detailed().
+#   Array with this name is populated by parse_options_detailed() and
+#   then can be passed to this function
+#
+print_usage_detailed() {
+	local self_key_name=$1 ; shift
+	local option_data_array_name=$1 ; shift
+	local alias_data_array_name=$1 ; shift
+	local alias_count
+
+	local option_data_array_string
+	local alias_data_array_string
+
+	option_data_array_string=$( declare -p $option_data_array_name )
+	alias_data_array_string=$( declare -p $alias_data_array_name )
+
+	eval "declare -A option_data="${option_data_array_string#*=}
+	eval "declare -A alias_data="${alias_data_array_string#*=}
+
+	declare -a options
+
+	options=( "${!option_data[@]}" )
+
+	readarray -t sorted_options \
+		< <(for a in "${options[@]}"; do [ $a != "$self_key_name" ] && echo "$a"; done | sort)
+
+	printf "%s" "$self_key_name "
+	print_as_per_schema "${option_data[$self_key_name]}"
+	echo
+
+	for option in "${sorted_options[@]}"
+	do
+		alias_count=${alias_data[$option,-1]}
+		printf "    %s" "$option"
+		for index in $( seq 0 "$(expr $alias_count - 1 )" )
+		do
+			printf "|%s" "${alias_data[$option,$index]}"
+		done
+
+		printf ' '
+		print_as_per_schema "${option_data[$option]}"
+		echo
+	done
+}
+
+#
+# Calls parse_options_detailed() with values set for
+# the assoicative arrays as OPTION_DATA and ALIAS_DATA.
+#
+print_usage() {
+	print_usage_detailed "$1" 'OPTION_DATA' 'ALIAS_DATA'
+}
+
+#
 # param1: error_code
 #   code returned by parse_options_detailed()
 #
@@ -214,8 +341,7 @@ option_parser_error_msg_detailed() {
 #   e.g., if terminator is ';' and there were 4 options, -n/--new,
 #         -v/--ver/--version, c/create & -e/--eat, then
 #
-#    parse_options_detailed \
-#      '~' 'OPTIONS' 'ARG_CNT' 'ARGS' '0' ';'      \
+#    parse_options \
 #      'self'                             '1 1 -1' \
 #      'c'    '~' 'create'                'S'      \
 #      '-e'   '~' '--eat'                 '1 1 -1' \
@@ -241,6 +367,60 @@ option_parser_error_msg_detailed() {
 # param8: error_opt
 #   This is the key that would be used in param2 array
 #   to store the name of the option which caused the error.
+#
+# param9: option_data_array_name
+#   This is the "name" of the associative array that would
+#   store all the valid options along with their schema.
+#   This is meant to be passed to parse_options_detailed()
+#   so that it can use option data to print the usage.
+#   e.g.,
+#    parse_options \
+#      'self'                         '1 1 -1' \
+#      'c'    , 'create'              'S'      \
+#      '-e'   , '--eat'               '1 1 -1' \
+#      '-n'   , '--new'               '1'      \
+#      '-v'   , '--version' , '--ver' '0'      \
+#      ';'                                     \
+#      "$@"
+#   As parse_options() uses the name OPTION_DATA by default, after calling
+#   this OPTION_DATA would look like:
+#   OPTION_DATA[self] = '1 1 -1'
+#   OPTION_DATA[c] = 'S'
+#   OPTION_DATA[-e] = '1 1 -1'
+#   OPTION_DATA[-n] = '1'
+#   OPTION_DATA[-v] = '0'
+#
+# param10: alias_data_array_name
+#   This is the "name" of the associative array that would
+#   store all the alias names corresponding to the option in a 2D array like format.
+#   This is meant to be passed to parse_options_detailed()
+#   so that it can use alias data to print the usage.
+#   e.g.,
+#    parse_options \
+#      'self'                         '1 1 -1' \
+#      'c'    , 'create'              'S'      \
+#      '-e'   , '--eat'               '1 1 -1' \
+#      '-n'   , '--new'               '1'      \
+#      '-v'   , '--version' , '--ver' '0'      \
+#      ';'                                     \
+#      "$@"
+#   As parse_options() uses the name ALIAS_DATA by default, after calling
+#   this ALIAS_DATA would look like:
+#   ALIAS_DATA[self,-1] = 0
+#
+#   ALIAS_DATA[c,-1] = 1 # -1 index stores alias count
+#   ALIAS_DATA[c,0] = create
+#
+#   ALIAS_DATA[-e,-1] = 1
+#   ALIAS_DATA[-e,0] = --eat
+#
+#   ALIAS_DATA[-n,-1] = 1
+#   ALIAS_DATA[-n,0] = --new
+#
+#   ALIAS_DATA[-v,-1] = 2
+#   ALIAS_DATA[-v,0] = --version
+#   ALIAS_DATA[-v,1] = --ver
+#
 #
 # self key name (first options to parse_options_detailed):
 #  If the options passed don't belong to a particular option
@@ -276,6 +456,8 @@ parse_options_detailed() {
 	local terminator=$1 ; shift
 	local no_opt_indicator=$1 ; shift
 	local error_opt=$1 ; shift
+	local option_data_array_name=$1 ; shift
+	local alias_data_array_name=$1 ; shift
 
 	# stores options as keys and their arg schema as value
 	declare -A option_array
@@ -284,9 +466,18 @@ parse_options_detailed() {
 	# contains original name of option
 	declare -A alias_array
 
+	# mapping from option name to alias names.
+	# it is in a 2D array-like format.
+	# e.g, For an option -a with aliases --abc and --efg,
+	# aliases[-a] = 2 # count
+	# aliases[-a,0] = --abc
+	# aliases[-a,1] = --efg
+	declare -A aliases
+
 	declare -gA $option_array_name
 	declare -gA $args_array_name
 	declare -gA $args_cnt_array_name
+	declare -gA $alias_data_array_name
 
 	local option
 	local current_option
@@ -301,6 +492,8 @@ parse_options_detailed() {
 	local self_schema
 	local self_schema_element
 	local shift_count=-1
+	local alias_counter
+	local option_array_as_string
 
 	# First option is self
 	if [ "$1" != "$terminator" ]
@@ -311,11 +504,19 @@ parse_options_detailed() {
 	# store all options as keys in `option_array[]` with schema as their value
 	until [ "$1" = "$terminator" ] ; do
 		option=$1 ; shift
+		alias_counter=0
 
  		# for all aliases, create a key in alias_array whose value is $option
 		while [ "$1" = "$separator" ]; do
-			shift ; alias_array[$1]=$option ; shift
+			shift
+			# Now $1 contains the alias
+			alias_array[$1]=$option
+			eval $alias_data_array_name\[\$option,\$alias_counter\]=\"\$1\"
+			alias_counter=$( expr $alias_counter + 1 )
+			shift
 		done
+
+		eval $alias_data_array_name\[\$option,-1\]=\"\$alias_counter\"
 
 		schema=$1
 
@@ -323,6 +524,11 @@ parse_options_detailed() {
 		option_array[$option]=$schema ; shift
 
 	done
+
+	option_array_as_string=$(declare -p option_array)
+
+	# copy option_array[] to a new associative array given by name $option_data_array_name
+	eval "declare -gA $option_data_array_name="${option_array_as_string#*=}
 
 	shift # to skip the terminator
 
@@ -443,7 +649,8 @@ parse_options_detailed() {
 # to the associative arrays used
 #
 parse_options() {
-       parse_options_detailed ',' 'OPTIONS' 'ARG_CNT' 'ARGS' '0' ';' '--' 'error_opt' "$@"
+       parse_options_detailed ',' 'OPTIONS' 'ARG_CNT' 'ARGS' '0' ';' '--' 'error_opt' \
+		   'OPTION_DATA' 'ALIAS_DATA' "$@"
 }
 
 #

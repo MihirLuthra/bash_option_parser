@@ -33,7 +33,7 @@ test_parser() {
 	local error_code
 
 	parse_options \
-		'self'                                 '1 1 ...' \
+		'command'                              '1 1 ...' \
 		'-m'        , '--make'   , '--create'  '0'       \
 		'-s'        , '--search' , '--find'    '1 1 -1'  \
 		'-v'        , '--var-args'             '1 ...'   \
@@ -46,7 +46,8 @@ test_parser() {
 
 	if [ $error_code -ne 0 ]; then
 		option_parser_error_msg "$error_code"
-		usage
+		print_usage 'command'
+		exit 1
 	fi
 
 	for key in "${!OPTIONS[@]}"; do
@@ -73,8 +74,9 @@ test_parser() {
 
 	parse_options_detailed \
 		',' 'OPTIONS_S' 'ARG_CNT_S' 'ARGS_S' "$shift_cnt" ';' '--' 'error_opt' \
+		'OPTION_DATA_S' 'ALIAS_DATA_S' \
 		                           \
-		'self'            '1 -1'   \
+		'suboption'       '1 -1'   \
 		'-a'  , '--apple' '0'      \
 		'-l'  , '--linux' '1 1 -1' \
 		'-u'  , '--unix'  '1 ...'  \
@@ -90,7 +92,7 @@ test_parser() {
 
 	if [ $error_code -ne 0 ]; then
 		option_parser_error_msg_detailed "$error_code" 'OPTIONS_S' 'ARG_CNT_S' 'ARGS_S' 'error_opt'
-		usage_suboption
+		print_usage_detailed 'suboption' 'OPTION_DATA_S' 'ALIAS_DATA_S'
 	fi
 
 
