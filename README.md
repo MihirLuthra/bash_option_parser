@@ -3,24 +3,24 @@
 <h2>Capabilities</h2>
 
 <ul>
-  <li>
-    Supports sub option parsing
-  </li>
-  <li>
-    Supports alias names for options
-  </li>
-  <li>
-    Supports optional arguments
-  </li>
 	<li>
-    Supports variable arguments
-  </li>
+		Supports sub option parsing
+	</li>
+	<li>
+		Supports alias names for options
+	</li>
+	<li>
+		Supports optional arguments
+	</li>
+	<li>
+		Supports variable arguments
+	</li>
 	<li>
 		Prints usage and error messages.
-  </li>
-  <li>
-    Easy to use
-  </li>
+	</li>
+	<li>
+		Easy to use
+	</li>
 </ul>
 
 <h2>Requirements</h2>
@@ -55,6 +55,9 @@
 	</li>
 	<li>
 		<a href="#print_usage_detailed">print_usage_detailed()</a>
+	</li>
+	<li>
+		<a href="#reserved-associative-array-names">Reserved assoicative array names</a>
 	</li>
 </ul>
 
@@ -333,6 +336,9 @@ param1 tells what separator you want to use to separate alias names.
 		If a suboption is encountered, it stores the number of shifts needed to reach the args of suboption
 		as the value corresponding to name of the option as the key.
 	</li>
+	<li>
+		This name should not be any of the <a href="#reserved-associative-array-names">reserved associative array names</a>.
+	</li>
 </ol>
 
 <h4>param3: Associative array name for storing argument count of passed options</h4>
@@ -346,6 +352,9 @@ param1 tells what separator you want to use to separate alias names.
 	<li>
 		This can be used with options that receive optional args and the arg count to be received is not certain.
 	</li>
+	<li>
+		This name should not be any of the <a href="#reserved-associative-array-names">reserved associative array names</a>.
+	</li>
 </ol>
 
 <h4>param4: Associative array name for storing arguments of passed options</h4>
@@ -357,6 +366,7 @@ e.g., if some option -s received 2 args, then the args will be stored as the fol
 [-s,0]=arg1
 [-s,1]=arg2
 </pre>
+This name should not be any of the <a href="#reserved-associative-array-names">reserved associative array names</a>.
 	
 <h4>param5: shift count</h4>
 
@@ -409,6 +419,7 @@ This is the "name" of the associative array that would
 store all the valid options along with their schema.
 This is meant to be passed to parse_options_detailed()
 so that it can use option data to print the usage.
+This name should not be any of the <a href="#reserved-associative-array-names">reserved associative array names</a>.
 e.g.,
 	 
 <pre>
@@ -437,6 +448,7 @@ This is the "name" of the associative array that would
 store all the alias names corresponding to the option in a 2D array like format.
 This is meant to be passed to parse_options_detailed()
 so that it can use alias data to print the usage.
+This name should not be any of the <a href="#reserved-associative-array-names">reserved associative array names</a>.
 e.g.,
 <pre>
 parse_options \
@@ -544,3 +556,14 @@ then can be passed to this function
 This is the same name that is passed to parse_options_detailed().
 Array with this name is populated by parse_options_detailed() and
 then can be passed to this function
+
+<h2>Reserved associative array names</h2>
+Following associative array names are reserved and shouldn't be used as custom names for arrays:
+<ul>
+	<li>
+		option_array
+	</li>
+	<li>
+		alias_array
+	</li>
+</ul>
