@@ -30,6 +30,34 @@
 	</li>
 </ul>
 
+<h2>Index</h2>
+<ul>
+	<li>
+		<a href="#example">Example</a>
+	</li>
+	<li>
+		<a href="#schema">Schema</a>
+	</li>
+	<li>
+		<a href="#parse_options">parse_options()</a>
+	</li>
+	<li>
+		<a href="#option_parser_error_msg">option_parser_error_msg()</a>
+	</li>
+	<li>
+		<a href="#print_usage">print_usage()</a>
+	</li>
+	<li>
+		<a href="#parse_options_detailed">parse_options_detailed()</a>
+	</li>
+	<li>
+		<a href="#option_parser_error_msg_detailed">option_parser_error_msg_detailed()</a>
+	</li>
+	<li>
+		<a href="#print_usage_detailed">print_usage_detailed()</a>
+	</li>
+</ul>
+
 
 <h2>Example</h2>
 
