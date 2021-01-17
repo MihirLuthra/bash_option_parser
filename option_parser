@@ -184,7 +184,7 @@ print_usage_detailed() {
 	options=( "${!option_data[@]}" )
 
 	readarray -t sorted_options \
-		< <(for a in "${options[@]}"; do [ $a != "$self_key_name" ] && echo "$a"; done | sort)
+		< <(for a in "${options[@]}"; do [ $a != "$self_key_name" ] && printf '%s\n' "$a"; done | sort)
 
 	printf "%s" "$self_key_name "
 	print_as_per_schema "${option_data[$self_key_name]}"
