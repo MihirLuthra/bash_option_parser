@@ -194,7 +194,8 @@ print_usage_detailed() {
 	do
 		alias_count=${alias_data[$option,-1]}
 		printf "    %s" "$option"
-		for index in $( seq 0 "$(expr $alias_count - 1 )" )
+
+		[ $alias_count -ne 0 ] && for index in $( seq 0 "$(expr $alias_count - 1 )" )
 		do
 			printf "|%s" "${alias_data[$option,$index]}"
 		done
