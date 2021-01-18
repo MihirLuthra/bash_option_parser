@@ -4,30 +4,6 @@ source ./option_parser
 
 readonly PROG_NAME="$(basename "$BASH_SOURCE")"
 
-usage() {
-
-	>&2 printf "%s\n" \
-		"$PROG_NAME arg1 arg2 ..." \
-		"  [-s|--search|--find arg1 arg2 [arg3]]" \
-		"  [-m|--make|--create]" \
-		"  [-v|--var-args ...] " \
-		"  suboption|subopt [args]"
-
-	exit 1
-}
-
-usage_suboption() {
-
-	>&2 printf "%s\n" \
-		"$PROG_NAME suboption name1 [name2]" \
-		"  [-a|--apple]" \
-		"  [-u|--unix arg1 ...]" \
-		"  [-l|--linux arg1 arg2 [arg3]] "
-
-	exit 1
-}
-
-
 test_parser() {
 	local last_arg
 	local error_code
@@ -95,7 +71,6 @@ test_parser() {
 		print_usage_detailed 'suboption' 'OPTION_DATA_S' 'ALIAS_DATA_S'
 	fi
 
-
 	for key in "${!OPTIONS_S[@]}"; do
 		echo "OPTION_S --> $key"
 		if [ -n "${ARG_CNT_S[$key]}" ] ;then
@@ -106,7 +81,6 @@ test_parser() {
 			done
 		fi
 	done
-
 }
 
 test_parser "$@"
