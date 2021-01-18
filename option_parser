@@ -527,14 +527,20 @@ parse_options_detailed() {
 
 	shift $nshift
 
-	if [ -z "$*" ]
-	then
-		return 0
-	fi
-
 	self_schema=${option_array[$self_key_name]}
 	self_schema_element="$( get_arg1 "$self_schema" )"
 	self_schema="$( shift_args "$self_schema" )"
+
+	if [ -z "$*" ]
+	then
+		if [ $self_schema_element -eq 1 ]
+		then
+			eval $option_array_name\[\$error_opt\]\=\"\$self_key_name\"
+			return 1
+		else
+			return 0
+		fi
+	fi
 
 	# This loop parses the cmd line args
 	for passed_arg in "$@" ; do
